@@ -23,12 +23,17 @@ const {
   shuffleLayerConfigurations,
   debugLogs,
   extraMetadata,
+  uniques,
+  metadataName
 } = require(path.join(basePath, "/src/config.js"));
 const canvas = createCanvas(format.width, format.height);
 const ctx = canvas.getContext("2d");
 var metadataList = [];
 var attributesList = [];
 var dnaList = [];
+var uniqueList = {};
+var uniquesFound = 0;
+require("crypto-js");
 
 const buildSetup = () => {
   if (fs.existsSync(buildDir)) {
@@ -76,11 +81,11 @@ const getElements = (path) => {
     });
 };
 
-const layersSetup = (layersOrder) => {
+const layersSetup = (layersOrder, customLayersDir) => {
   const layers = layersOrder.map((layerObj, index) => ({
     id: index,
     name: layerObj.name,
-    elements: getElements(`${layersDir}/${layerObj.name}/`),
+    elements: getElements(`${layersDir}/${customLayersDir || ""}${layerObj.name}/`),
     blendMode:
       layerObj["blend"] != undefined ? layerObj["blend"] : "source-over",
     opacity: layerObj["opacity"] != undefined ? layerObj["opacity"] : 1,
@@ -106,18 +111,32 @@ const drawBackground = () => {
   ctx.fillRect(0, 0, format.width, format.height);
 };
 
-const addMetadata = (_dna, _edition) => {
-  let dateTime = Date.now();
+const addMetadata = (_dna, _edition, _custom) => {
+
+  if(_custom) {
+    attributesList = [
+      {
+        trait_type: 'custom',
+        value: 'Legendary'
+      },
+      {
+        trait_type: 'name',
+        value: _custom.name
+      },
+    ];
+  }
+
+  //let dateTime = Date.now();
   let tempMetadata = {
-    dna: sha1(_dna.join("")),
-    name: `#${_edition}`,
+    //dna: sha1(_dna.join("")),
+    name: metadataName + ` #${_edition}`,
     description: description,
     image: `${baseUri}/${_edition}.png`,
-    edition: _edition,
-    date: dateTime,
-    ...extraMetadata,
+    // edition: _edition,
+    //date: dateTime,
+    //...extraMetadata,
     attributes: attributesList,
-    compiler: "HashLips Art Engine",
+    //compiler: "HashLips Art Engine",
   };
   metadataList.push(tempMetadata);
   attributesList = [];
@@ -192,11 +211,12 @@ const writeMetaData = (_data) => {
 };
 
 const saveMetaDataSingleFile = (_editionCount) => {
-  let metadata = metadataList.find((meta) => meta.edition == _editionCount);
+  //let metadata = metadataList.find((meta) => meta.edition == _editionCount);
+  let metadata = metadataList[_editionCount - 1];
   debugLogs
     ? console.log(
-        `Writing metadata for ${_editionCount}: ${JSON.stringify(metadata)}`
-      )
+      `Writing metadata for ${_editionCount}: ${JSON.stringify(metadata)}`
+    )
     : null;
   fs.writeFileSync(
     `${buildDir}/json/${_editionCount}.json`,
@@ -216,6 +236,17 @@ function shuffle(array) {
     ];
   }
   return array;
+}
+
+function getAvailableUnique() {
+  let random = Math.floor(Math.random() * 100) % uniques.length;
+  if(uniqueList[random]) {
+    while(uniqueList[random]) {
+      random = Math.floor(Math.random() * 100) % uniques.length;
+    }
+  }
+  uniqueList[random] = true;
+  return uniques[random];
 }
 
 const startCreating = async () => {
@@ -243,9 +274,28 @@ const startCreating = async () => {
     while (
       editionCount <= layerConfigurations[layerConfigIndex].growEditionSizeTo
     ) {
-      let newDna = createDna(layers);
+
+      // check for unique
+      let random = Math.floor(Math.random() * 100);
+      let rare = null;
+      let isRare = false;
+      let rareLayers = {};
+
+      if (uniquesFound < uniques.length && random <= layerConfigurations[layerConfigIndex].rarityPercent) {
+        isRare = true;
+        rare = getAvailableUnique();
+        console.log(`Rare found, ${rare.name}!`)
+        rareLayers = layersSetup(
+          layerConfigurations[layerConfigIndex].layersOrder,
+          rare.folder
+        );
+      }
+
+      let activeLayer = !isRare ? layers : rareLayers;
+
+      let newDna = createDna(activeLayer);
       if (isDnaUnique(dnaList, newDna)) {
-        let results = constructLayerToDna(newDna, layers);
+        let results = constructLayerToDna(newDna, activeLayer);
         let loadedElements = [];
 
         results.forEach((layer) => {
@@ -264,11 +314,12 @@ const startCreating = async () => {
           debugLogs
             ? console.log("Editions left to create: ", abstractedIndexes)
             : null;
-          saveImage(abstractedIndexes[0]);
-          addMetadata(newDna, abstractedIndexes[0]);
-          saveMetaDataSingleFile(abstractedIndexes[0]);
+          const index = editionCount; // abstractedIndex[0];
+          saveImage(index);
+          addMetadata(newDna, index, rare);
+          saveMetaDataSingleFile(index);
           console.log(
-            `Created edition: ${abstractedIndexes[0]}, with DNA: ${sha1(
+            `Created edition: ${index}, with DNA: ${sha1(
               newDna.join("")
             )}`
           );
@@ -276,6 +327,7 @@ const startCreating = async () => {
         dnaList.push(newDna);
         editionCount++;
         abstractedIndexes.shift();
+        if(isRare) uniquesFound++;
       } else {
         console.log("DNA exists!");
         failedCount++;

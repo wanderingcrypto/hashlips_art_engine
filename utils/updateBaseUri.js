@@ -12,12 +12,14 @@ const { baseUri } = require(path.join(basePath, "/src/config.js"));
 let rawdata = fs.readFileSync(`${basePath}/build/json/_metadata.json`);
 let data = JSON.parse(rawdata);
 
+let startingIndex = 1;
 data.forEach((item) => {
-  item.image = `${baseUri}/${item.edition}.png`;
+  item.image = `${baseUri}/${startingIndex}.png`;
   fs.writeFileSync(
-    `${basePath}/build/json/${item.edition}.json`,
+    `${basePath}/build/json/${startingIndex}.json`,
     JSON.stringify(item, null, 2)
   );
+  startingIndex++;
 });
 
 fs.writeFileSync(

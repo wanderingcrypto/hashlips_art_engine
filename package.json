@@ -19,6 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "canvas": "^2.8.0",
+	"crypto-js": "^4.1.1",
     "sha1": "^1.1.1"
   }
 }
