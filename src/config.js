@@ -6,7 +6,7 @@ const basePath = isLocal ? process.cwd() : path.dirname(process.execPath);
 const { MODE } = require(path.join(basePath, "src/blendMode.js"));
 const description =
   "Crypto Karens is a collection of 100 outraged, randomly generated NFTs that exist on the blockchain. Holders of Crypto Karens take part in the multi-meme-verse and future community drops and events. Be on the look-out as some are unique and more rare than others.";
-const baseUri = "ipfs://QmP8zGR7MXGMdStzsifcEH8A3u8AxZeg68pHum6QxHpdQC";
+const baseUri = "ipfs://IPFS_URI_HERE";
 const metadataName = "Crypto Karens";
 
 const layerConfigurations = [
