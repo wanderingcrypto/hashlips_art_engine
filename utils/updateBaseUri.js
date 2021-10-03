@@ -16,7 +16,7 @@ let startingIndex = 1;
 data.forEach((item) => {
   item.image = `${baseUri}/${startingIndex}.png`;
   fs.writeFileSync(
-    `${basePath}/build/json/${startingIndex}.json`,
+    `${basePath}/build/json/${startingIndex}`,
     JSON.stringify(item, null, 2)
   );
   startingIndex++;
